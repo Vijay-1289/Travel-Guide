@@ -1,7 +1,7 @@
 
 import React, { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, MapPin, ChevronRight, Home } from 'lucide-react';
+import { Menu, X, MapPin, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -106,13 +106,13 @@ const Layout = ({ children }: LayoutProps) => {
         </div>
       )}
       
-      {/* Main Content */}
-      <main className="flex-grow pt-16">
+      {/* Main Content - important fix: adding padding-top to push content below fixed header */}
+      <main className="flex-grow pt-20">
         {children}
       </main>
       
       {/* Footer */}
-      <footer className="bg-secondary py-12 mt-16">
+      <footer className="bg-secondary py-12 mt-8">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>

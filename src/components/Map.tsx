@@ -2,15 +2,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { MapPin, Navigation, Loader } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Destination } from '@/lib/destinations';
 import { getUserLocation, getDirections } from '@/lib/mapUtils';
 
 interface MapProps {
-  destination: Destination;
+  latitude: number;
+  longitude: number;
+  zoom: number;
+  markerTitle: string;
   className?: string;
 }
 
-const Map = ({ destination, className }: MapProps) => {
+const Map = ({ latitude, longitude, zoom, markerTitle, className }: MapProps) => {
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<GeolocationPosition | null>(null);
   const [userLocationError, setUserLocationError] = useState<string | null>(null);
@@ -53,8 +55,8 @@ const Map = ({ destination, className }: MapProps) => {
     const directionsUrl = getDirections(
       userLocation.coords.latitude,
       userLocation.coords.longitude,
-      destination.coordinates.lat,
-      destination.coordinates.lng
+      latitude,
+      longitude
     );
     
     window.open(directionsUrl, '_blank');
@@ -76,7 +78,7 @@ const Map = ({ destination, className }: MapProps) => {
             ref={mapContainerRef}
             className="absolute inset-0 bg-cover bg-center"
             style={{ 
-              backgroundImage: `url(https://maps.googleapis.com/maps/api/staticmap?center=${destination.coordinates.lat},${destination.coordinates.lng}&zoom=12&size=800x400&markers=color:red%7C${destination.coordinates.lat},${destination.coordinates.lng}&key=YOUR_API_KEY_HERE)`
+              backgroundImage: `url(https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=${zoom}&size=800x400&markers=color:red%7C${latitude},${longitude}&key=AIzaSyC9LDb9h0xPPNZ2WLIV9-Wzr5s2nBUVh6c)`
             }}
           >
             {/* Map Placeholder Overlay */}
@@ -88,9 +90,8 @@ const Map = ({ destination, className }: MapProps) => {
             <div className="glass px-4 py-2 rounded-lg self-start">
               <h3 className="font-medium flex items-center">
                 <MapPin className="h-4 w-4 text-primary mr-1" />
-                {destination.name}
+                {markerTitle}
               </h3>
-              <p className="text-xs text-muted-foreground">{destination.location}</p>
             </div>
             
             <div className="flex flex-col space-y-2">
@@ -119,7 +120,7 @@ const Map = ({ destination, className }: MapProps) => {
               <div className="glass px-4 py-2 rounded-lg">
                 <p className="text-xs text-muted-foreground mb-1">Coordinates</p>
                 <p className="text-sm">
-                  {destination.coordinates.lat.toFixed(4)}, {destination.coordinates.lng.toFixed(4)}
+                  {latitude.toFixed(4)}, {longitude.toFixed(4)}
                 </p>
               </div>
             </div>

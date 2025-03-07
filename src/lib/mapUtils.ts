@@ -1,5 +1,5 @@
 
-import { Destination } from './destinations';
+import { TransportOption } from './destinations';
 
 // Function to get user's current location
 export const getUserLocation = (): Promise<GeolocationPosition> => {
@@ -55,17 +55,24 @@ export const getDirections = (
 
 // Function to simulate real-time availability of transportation
 export const getTransportAvailability = (
-  transportType: string,
-  destination: Destination
+  transportType: string
 ): { status: 'high' | 'medium' | 'low'; text: string } => {
   // This is a simulation - in a real app, you'd fetch real-time data from a transport API
-  const transport = destination.transport.find(t => t.type === transportType);
   
-  if (!transport) {
-    return { status: 'low', text: 'Not available' };
+  // Randomly generate availability based on time of day
+  const hour = new Date().getHours();
+  let status: 'high' | 'medium' | 'low';
+  
+  if (hour >= 7 && hour <= 10 || hour >= 16 && hour <= 19) {
+    // Rush hours - less availability
+    status = Math.random() > 0.7 ? 'medium' : 'low';
+  } else if (hour >= 23 || hour <= 5) {
+    // Late night - low availability
+    status = Math.random() > 0.8 ? 'medium' : 'low';
+  } else {
+    // Normal hours - better availability
+    status = Math.random() > 0.6 ? 'high' : 'medium';
   }
-  
-  const status = transport.availabilityStatus || 'medium';
   
   let text = '';
   switch (status) {
@@ -96,74 +103,125 @@ export const getWeatherData = async (
   windSpeed: number;
   icon: string;
 }> => {
-  // This is a simulation - in a real app, you'd fetch real-time data from a weather API
-  // For demo purposes, we'll return mock data that looks reasonably realistic
-  
   // Simulate API call delay
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  const conditions = [
-    'Sunny',
-    'Partly Cloudy',
-    'Cloudy',
-    'Light Rain',
-    'Heavy Rain',
-    'Thunderstorm',
-    'Foggy',
-    'Clear'
-  ];
-  
-  const icons = [
-    'sun',
-    'cloud-sun',
-    'cloud',
-    'cloud-drizzle',
-    'cloud-rain',
-    'cloud-lightning',
-    'cloud-fog',
-    'moon'
-  ];
-  
-  const randomIndex = Math.floor(Math.random() * conditions.length);
-  
-  return {
-    temperature: Math.floor(Math.random() * 15) + 20, // Random temp between 20-35°C
-    condition: conditions[randomIndex],
-    humidity: Math.floor(Math.random() * 30) + 50, // Random humidity between 50-80%
-    windSpeed: Math.floor(Math.random() * 20) + 5, // Random wind speed between 5-25 km/h
-    icon: icons[randomIndex]
-  };
+  // Fetch real weather data from OpenWeatherMap
+  try {
+    const response = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&appid=886705b4c1182eb1c69f28eb8c520e20`
+    );
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch weather data');
+    }
+    
+    const data = await response.json();
+    
+    return {
+      temperature: Math.round(data.main.temp),
+      condition: data.weather[0].main,
+      humidity: data.main.humidity,
+      windSpeed: Math.round(data.wind.speed),
+      icon: data.weather[0].icon
+    };
+  } catch (error) {
+    console.error('Error fetching weather data:', error);
+    
+    // Fallback to generated data
+    const conditions = [
+      'Sunny',
+      'Partly Cloudy',
+      'Cloudy',
+      'Light Rain',
+      'Heavy Rain',
+      'Thunderstorm',
+      'Foggy',
+      'Clear'
+    ];
+    
+    const icons = [
+      'sun',
+      'cloud-sun',
+      'cloud',
+      'cloud-drizzle',
+      'cloud-rain',
+      'cloud-lightning',
+      'cloud-fog',
+      'moon'
+    ];
+    
+    const randomIndex = Math.floor(Math.random() * conditions.length);
+    
+    return {
+      temperature: Math.floor(Math.random() * 15) + 20, // Random temp between 20-35°C
+      condition: conditions[randomIndex],
+      humidity: Math.floor(Math.random() * 30) + 50, // Random humidity between 50-80%
+      windSpeed: Math.floor(Math.random() * 20) + 5, // Random wind speed between 5-25 km/h
+      icon: icons[randomIndex]
+    };
+  }
 };
 
-// Function to simulate crowd levels
+// Function to get crowd level based on time and day
 export const getCrowdLevel = (): {
   level: 'low' | 'moderate' | 'high' | 'very high';
   percentage: number;
   text: string;
 } => {
-  // This is a simulation - in a real app, you'd fetch real-time data
-  const levels = ['low', 'moderate', 'high', 'very high'] as const;
-  const randomIndex = Math.floor(Math.random() * levels.length);
-  const level = levels[randomIndex];
+  // Get current day and hour
+  const day = new Date().getDay(); // 0 is Sunday, 6 is Saturday
+  const hour = new Date().getHours();
   
-  let percentage = 0;
+  // Weekend vs. weekday logic
+  const isWeekend = day === 0 || day === 6;
+  
+  let level: 'low' | 'moderate' | 'high' | 'very high';
+  let percentage: number;
+  
+  if (isWeekend) {
+    if (hour >= 10 && hour <= 16) {
+      // Peak weekend hours
+      level = 'very high';
+      percentage = Math.floor(Math.random() * 30) + 70; // 70-100%
+    } else if ((hour >= 8 && hour < 10) || (hour > 16 && hour <= 18)) {
+      // Busy weekend hours
+      level = 'high';
+      percentage = Math.floor(Math.random() * 20) + 50; // 50-70%
+    } else {
+      // Off-peak weekend
+      level = 'moderate';
+      percentage = Math.floor(Math.random() * 20) + 30; // 30-50%
+    }
+  } else {
+    // Weekday
+    if (hour >= 11 && hour <= 14) {
+      // Lunch hours
+      level = 'high';
+      percentage = Math.floor(Math.random() * 20) + 50; // 50-70%
+    } else if (hour >= 9 && hour <= 17) {
+      // Work hours
+      level = 'moderate';
+      percentage = Math.floor(Math.random() * 20) + 30; // 30-50%
+    } else {
+      // Early morning or evening
+      level = 'low';
+      percentage = Math.floor(Math.random() * 25) + 5; // 5-30%
+    }
+  }
+  
   let text = '';
-  
   switch (level) {
     case 'low':
-      percentage = Math.floor(Math.random() * 25) + 5; // 5-30%
       text = 'Low crowds - great time to visit';
       break;
     case 'moderate':
-      percentage = Math.floor(Math.random() * 20) + 30; // 30-50%
       text = 'Moderate crowds - reasonable waiting times';
       break;
     case 'high':
-      percentage = Math.floor(Math.random() * 20) + 50; // 50-70%
       text = 'High crowds - expect some waiting';
       break;
     case 'very high':
-      percentage = Math.floor(Math.random() * 30) + 70; // 70-100%
       text = 'Very crowded - long waiting times expected';
       break;
   }
@@ -171,21 +229,36 @@ export const getCrowdLevel = (): {
   return { level, percentage, text };
 };
 
-// Function to format time to visit recommendation based on current time
+// Function to get time to visit recommendation
 export const getTimeToVisitRecommendation = (): string => {
   const hour = new Date().getHours();
+  const day = new Date().getDay();
+  const isWeekend = day === 0 || day === 6;
   
-  if (hour < 6) {
-    return 'Best to visit after sunrise around 6-7 AM for fewer crowds';
-  } else if (hour < 10) {
-    return 'Morning is a great time to visit with moderate crowds';
-  } else if (hour < 12) {
-    return 'Late morning currently has moderate to high crowds';
-  } else if (hour < 15) {
-    return 'Early afternoon typically has the highest crowds';
-  } else if (hour < 18) {
-    return 'Late afternoon is better as crowds start to reduce';
+  if (isWeekend) {
+    if (hour < 9) {
+      return 'Early morning is the best time to visit on weekends to avoid crowds';
+    } else if (hour < 11) {
+      return 'Morning hours are getting busier, but still a good time to visit';
+    } else if (hour < 15) {
+      return 'Peak weekend hours - expect significant crowds';
+    } else if (hour < 18) {
+      return 'Late afternoon is busy but crowds are starting to reduce';
+    } else {
+      return 'Evening hours are less crowded - good for a more relaxed visit';
+    }
   } else {
-    return 'Evening visits offer a different atmosphere with lower crowds';
+    // Weekday recommendations
+    if (hour < 9) {
+      return 'Early morning on weekdays is perfect for a quiet visit';
+    } else if (hour < 12) {
+      return 'Morning on weekdays has moderate crowds, good time to visit';
+    } else if (hour < 14) {
+      return 'Lunch hours may be busier with local visitors';
+    } else if (hour < 17) {
+      return 'Afternoon is a good time for a weekday visit';
+    } else {
+      return 'Evening visits are recommended for fewer crowds and a different atmosphere';
+    }
   }
 };

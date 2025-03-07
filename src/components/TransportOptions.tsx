@@ -1,16 +1,16 @@
 
 import React from 'react';
-import { Bus, Train, Plane, Car, AlertCircle, Ship, Truck } from 'lucide-react';
-import { Destination, TransportOption } from '@/lib/destinations';
+import { Bus, Train, Plane, Car, AlertCircle, Ship } from 'lucide-react';
+import { TransportOption } from '@/lib/destinations';
 import { getTransportAvailability } from '@/lib/mapUtils';
 import { cn } from '@/lib/utils';
 
 interface TransportOptionsProps {
-  destination: Destination;
+  transport: TransportOption[];
   className?: string;
 }
 
-const TransportOptions = ({ destination, className }: TransportOptionsProps) => {
+const TransportOptions = ({ transport, className }: TransportOptionsProps) => {
   const renderIcon = (type: string, className: string = 'h-5 w-5') => {
     switch (type) {
       case 'bus':
@@ -48,15 +48,15 @@ const TransportOptions = ({ destination, className }: TransportOptionsProps) => 
     <div className={cn("space-y-4", className)}>
       <h3 className="text-lg font-medium mb-4">Transport Options</h3>
       
-      {destination.transport.length === 0 ? (
+      {transport.length === 0 ? (
         <div className="flex items-center space-x-2 text-muted-foreground">
           <AlertCircle className="h-5 w-5" />
           <span>No transport information available</span>
         </div>
       ) : (
         <div className="space-y-4">
-          {destination.transport.map((option, index) => {
-            const availability = getTransportAvailability(option.type, destination);
+          {transport.map((option, index) => {
+            const availability = getTransportAvailability(option.type);
             
             return (
               <div 

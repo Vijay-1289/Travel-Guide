@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TransportOptions from '@/components/TransportOptions';
 import Map from '@/components/Map';
 import { toast } from '@/components/ui/use-toast';
+import { getWeatherData } from '@/lib/mapUtils';
 
 const DestinationDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,17 +16,30 @@ const DestinationDetail = () => {
   const [destination, setDestination] = useState<Destination | null>(null);
   const [activeImage, setActiveImage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [weather, setWeather] = useState<any>(null);
 
   useEffect(() => {
     if (!id) return;
     
-    const fetchDestination = () => {
+    const fetchDestination = async () => {
       setLoading(true);
       const foundDestination = getDestinationById(id);
       
       if (foundDestination) {
         setDestination(foundDestination);
         setActiveImage(foundDestination.imageUrl);
+        
+        // Fetch real-time weather data
+        try {
+          const weatherData = await getWeatherData(
+            foundDestination.coordinates.lat,
+            foundDestination.coordinates.lng
+          );
+          setWeather(weatherData);
+        } catch (error) {
+          console.error('Error fetching weather:', error);
+        }
+        
         setLoading(false);
       } else {
         toast({
@@ -114,6 +128,28 @@ const DestinationDetail = () => {
             </span>
           </div>
           
+          {/* Weather information */}
+          {weather && (
+            <div className="bg-primary/5 p-4 rounded-lg">
+              <h3 className="font-medium mb-2">Current Weather</h3>
+              <div className="flex items-center">
+                <img 
+                  src={`https://openweathermap.org/img/wn/${weather.icon}.png`} 
+                  alt={weather.condition} 
+                  className="mr-2 w-12 h-12"
+                />
+                <div>
+                  <p className="font-medium text-lg">{weather.temperature}°C</p>
+                  <p className="text-sm text-muted-foreground">{weather.condition}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                <p>Humidity: {weather.humidity}%</p>
+                <p>Wind: {weather.windSpeed} km/h</p>
+              </div>
+            </div>
+          )}
+          
           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>Best time to visit: {destination.bestTimeToVisit}</span>
@@ -181,7 +217,7 @@ const DestinationDetail = () => {
           
           <TabsContent value="transport" className="mt-6">
             <h2 className="text-2xl font-semibold mb-6">Transport Options</h2>
-            <TransportOptions transportOptions={destination.transport} />
+            <TransportOptions transport={destination.transport} />
           </TabsContent>
           
           <TabsContent value="nearby" className="mt-6">

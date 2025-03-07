@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Bus, Train, Plane, Car, AlertCircle } from 'lucide-react';
+import { Bus, Train, Plane, Car, AlertCircle, Ship, Truck } from 'lucide-react';
 import { Destination, TransportOption } from '@/lib/destinations';
 import { getTransportAvailability } from '@/lib/mapUtils';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,10 @@ const TransportOptions = ({ destination, className }: TransportOptionsProps) => 
       case 'car':
       case 'taxi':
         return <Car className={className} />;
+      case 'metro':
+        return <Train className={className} />;
+      case 'boat':
+        return <Ship className={className} />;
       default:
         return <Car className={className} />;
     }

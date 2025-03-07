@@ -1,7 +1,7 @@
 
 // Destinations data with India's top tourist places
 export interface TransportOption {
-  type: 'bus' | 'train' | 'plane' | 'taxi' | 'car';
+  type: 'bus' | 'train' | 'plane' | 'taxi' | 'car' | 'metro' | 'boat';
   duration: string;
   cost: string;
   frequency?: string;

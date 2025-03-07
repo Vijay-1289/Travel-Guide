@@ -1,11 +1,17 @@
 
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Search, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { destinations } from '@/lib/destinations';
+import { toast } from '@/components/ui/use-toast';
 
 const Hero = () => {
+  const navigate = useNavigate();
   const [loaded, setLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{id: string, name: string, location: string}>>([]);
+  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     // Simulate image loading and reveal animation
@@ -16,10 +22,72 @@ const Hero = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Update search results when search query changes
+  useEffect(() => {
+    if (searchQuery.length > 1) {
+      const query = searchQuery.toLowerCase();
+      const results = destinations
+        .filter(dest => 
+          dest.name.toLowerCase().includes(query) || 
+          dest.location.toLowerCase().includes(query) ||
+          dest.tags.some(tag => tag.toLowerCase().includes(query))
+        )
+        .map(dest => ({
+          id: dest.id,
+          name: dest.name,
+          location: dest.location
+        }));
+      
+      setSearchResults(results);
+      setShowResults(true);
+    } else {
+      setSearchResults([]);
+      setShowResults(false);
+    }
+  }, [searchQuery]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Implement search functionality
+    
+    // Search logic
     console.log('Searching for:', searchQuery);
+    
+    if (!searchQuery.trim()) {
+      toast({
+        title: "Search error",
+        description: "Please enter a destination to search",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // If we have exact match, navigate to that destination
+    const exactMatch = destinations.find(
+      dest => dest.name.toLowerCase() === searchQuery.toLowerCase()
+    );
+    
+    if (exactMatch) {
+      navigate(`/destination/${exactMatch.id}`);
+      return;
+    }
+    
+    // If we have search results but not exact match, navigate to first result
+    if (searchResults.length > 0) {
+      navigate(`/destination/${searchResults[0].id}`);
+      return;
+    }
+    
+    // No results found
+    toast({
+      title: "No destinations found",
+      description: `We couldn't find any destinations matching "${searchQuery}"`,
+      variant: "destructive"
+    });
+  };
+
+  const handleResultClick = (id: string) => {
+    setShowResults(false);
+    navigate(`/destination/${id}`);
   };
 
   return (
@@ -58,7 +126,7 @@ const Hero = () => {
             className="relative mx-auto max-w-2xl bg-white/10 backdrop-blur-md p-1 rounded-full border border-white/20 shadow-lg transform transition-all duration-300 focus-within:scale-[1.02] focus-within:shadow-xl"
           >
             <div className="flex items-center">
-              <div className="flex-grow flex items-center pl-4">
+              <div className="flex-grow flex items-center pl-4 relative">
                 <Search className="h-5 w-5 text-white/70 mr-2" />
                 <input
                   type="text"
@@ -66,8 +134,33 @@ const Hero = () => {
                   className="w-full bg-transparent text-white placeholder:text-white/60 text-base py-3 focus:outline-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                  onFocus={() => searchResults.length > 0 && setShowResults(true)}
                   aria-label="Search destinations"
                 />
+                
+                {/* Search Results Dropdown */}
+                {showResults && searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden z-50">
+                    <ul className="max-h-60 overflow-auto py-1">
+                      {searchResults.map((result) => (
+                        <li key={result.id}>
+                          <button
+                            type="button"
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                            onClick={() => handleResultClick(result.id)}
+                          >
+                            <MapPin className="h-4 w-4 mr-2 text-primary" />
+                            <div>
+                              <div className="font-medium">{result.name}</div>
+                              <div className="text-xs text-muted-foreground">{result.location}</div>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
               <button 
                 type="submit"

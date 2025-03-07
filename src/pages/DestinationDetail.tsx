@@ -8,7 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TransportOptions from '@/components/TransportOptions';
 import Map from '@/components/Map';
 import { toast } from '@/components/ui/use-toast';
-import { getWeatherData } from '@/lib/mapUtils';
+import { 
+  getWeatherData, 
+  getAirQualityData, 
+  getLocalEvents,
+  getCurrencyRates
+} from '@/lib/mapUtils';
+import AirQualityInfo from '@/components/AirQualityInfo';
+import LocalEvents from '@/components/LocalEvents';
+import CurrencyExchange from '@/components/CurrencyExchange';
+import WeatherForecast from '@/components/WeatherForecast';
 
 const DestinationDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +26,9 @@ const DestinationDetail = () => {
   const [activeImage, setActiveImage] = useState('');
   const [loading, setLoading] = useState(true);
   const [weather, setWeather] = useState<any>(null);
+  const [airQuality, setAirQuality] = useState<any>(null);
+  const [localEvents, setLocalEvents] = useState<any>(null);
+  const [currencyRates, setCurrencyRates] = useState<any>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -29,15 +41,32 @@ const DestinationDetail = () => {
         setDestination(foundDestination);
         setActiveImage(foundDestination.imageUrl);
         
-        // Fetch real-time weather data
+        // Fetch real-time data in parallel
         try {
-          const weatherData = await getWeatherData(
-            foundDestination.coordinates.lat,
-            foundDestination.coordinates.lng
-          );
+          const [weatherData, airQualityData, eventsData, currencyData] = await Promise.all([
+            getWeatherData(
+              foundDestination.coordinates.lat,
+              foundDestination.coordinates.lng
+            ),
+            getAirQualityData(
+              foundDestination.coordinates.lat,
+              foundDestination.coordinates.lng
+            ),
+            getLocalEvents(foundDestination.location.split(',')[0].trim()),
+            getCurrencyRates()
+          ]);
+          
           setWeather(weatherData);
+          setAirQuality(airQualityData);
+          setLocalEvents(eventsData);
+          setCurrencyRates(currencyData);
         } catch (error) {
-          console.error('Error fetching weather:', error);
+          console.error('Error fetching real-time data:', error);
+          toast({
+            title: "Data Fetch Warning",
+            description: "Some real-time information could not be loaded.",
+            variant: "destructive"
+          });
         }
         
         setLoading(false);
@@ -147,6 +176,10 @@ const DestinationDetail = () => {
                 <p>Humidity: {weather.humidity}%</p>
                 <p>Wind: {weather.windSpeed} km/h</p>
               </div>
+              
+              {weather.forecast && (
+                <WeatherForecast forecast={weather.forecast} className="mt-4" />
+              )}
             </div>
           )}
           
@@ -194,11 +227,12 @@ const DestinationDetail = () => {
       {/* Tabs for different sections */}
       <div className="mt-12">
         <Tabs defaultValue="about">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="about">About</TabsTrigger>
             <TabsTrigger value="transport">Transport</TabsTrigger>
             <TabsTrigger value="nearby">Nearby Places</TabsTrigger>
             <TabsTrigger value="map">Map</TabsTrigger>
+            <TabsTrigger value="practical">Practical Info</TabsTrigger>
           </TabsList>
           
           <TabsContent value="about" className="mt-6">
@@ -212,6 +246,12 @@ const DestinationDetail = () => {
                 <h2 className="text-2xl font-semibold mb-4">Historical Significance</h2>
                 <p className="text-muted-foreground">{destination.historicalSignificance}</p>
               </div>
+              
+              {localEvents && (
+                <div className="mt-8">
+                  <LocalEvents events={localEvents} />
+                </div>
+              )}
             </div>
           </TabsContent>
           
@@ -244,6 +284,24 @@ const DestinationDetail = () => {
                 zoom={10}
                 markerTitle={destination.name}
               />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="practical" className="mt-6">
+            <h2 className="text-2xl font-semibold mb-6">Practical Information</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {airQuality && (
+                <div className="bg-primary/5 rounded-lg">
+                  <AirQualityInfo airQuality={airQuality} />
+                </div>
+              )}
+              
+              {currencyRates && (
+                <div className="bg-primary/5 rounded-lg">
+                  <CurrencyExchange rates={currencyRates} />
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

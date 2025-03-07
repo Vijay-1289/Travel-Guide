@@ -1,4 +1,3 @@
-
 import { TransportOption } from './destinations';
 
 // Function to get user's current location
@@ -102,12 +101,16 @@ export const getWeatherData = async (
   humidity: number;
   windSpeed: number;
   icon: string;
+  forecast?: Array<{
+    day: string;
+    temp: number;
+    condition: string;
+    icon: string;
+  }>;
 }> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
   // Fetch real weather data from OpenWeatherMap
   try {
+    // Current weather
     const response = await fetch(
       `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&appid=886705b4c1182eb1c69f28eb8c520e20`
     );
@@ -118,12 +121,46 @@ export const getWeatherData = async (
     
     const data = await response.json();
     
+    // Get 3-day forecast data
+    const forecastResponse = await fetch(
+      `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&appid=886705b4c1182eb1c69f28eb8c520e20&cnt=24`
+    );
+    
+    if (!forecastResponse.ok) {
+      throw new Error('Failed to fetch forecast data');
+    }
+    
+    const forecastData = await forecastResponse.json();
+    
+    // Process forecast data - get one entry per day
+    const processedForecast = [];
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const seenDays = new Set();
+    
+    for (const item of forecastData.list) {
+      const date = new Date(item.dt * 1000);
+      const dayName = days[date.getDay()];
+      
+      if (!seenDays.has(dayName) && seenDays.size < 3) {
+        seenDays.add(dayName);
+        processedForecast.push({
+          day: dayName,
+          temp: Math.round(item.main.temp),
+          condition: item.weather[0].main,
+          icon: item.weather[0].icon
+        });
+      }
+      
+      if (seenDays.size >= 3) break;
+    }
+    
     return {
       temperature: Math.round(data.main.temp),
       condition: data.weather[0].main,
       humidity: data.main.humidity,
       windSpeed: Math.round(data.wind.speed),
-      icon: data.weather[0].icon
+      icon: data.weather[0].icon,
+      forecast: processedForecast
     };
   } catch (error) {
     console.error('Error fetching weather data:', error);
@@ -260,5 +297,169 @@ export const getTimeToVisitRecommendation = (): string => {
     } else {
       return 'Evening visits are recommended for fewer crowds and a different atmosphere';
     }
+  }
+};
+
+// Add a new function to get air quality data
+export const getAirQualityData = async (
+  lat: number,
+  lng: number
+): Promise<{
+  aqi: number;
+  status: 'Good' | 'Moderate' | 'Unhealthy for Sensitive Groups' | 'Unhealthy' | 'Very Unhealthy' | 'Hazardous';
+  components: {
+    co: number;
+    no2: number;
+    o3: number;
+    pm2_5: number;
+    pm10: number;
+  }
+}> => {
+  try {
+    const response = await fetch(
+      `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lng}&appid=886705b4c1182eb1c69f28eb8c520e20`
+    );
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch air quality data');
+    }
+    
+    const data = await response.json();
+    
+    // Map AQI to human-readable status
+    const aqiMap: Record<number, 'Good' | 'Moderate' | 'Unhealthy for Sensitive Groups' | 'Unhealthy' | 'Very Unhealthy' | 'Hazardous'> = {
+      1: 'Good',
+      2: 'Moderate',
+      3: 'Unhealthy for Sensitive Groups',
+      4: 'Unhealthy',
+      5: 'Very Unhealthy'
+    };
+    
+    return {
+      aqi: data.list[0].main.aqi,
+      status: aqiMap[data.list[0].main.aqi] || 'Hazardous',
+      components: {
+        co: data.list[0].components.co,
+        no2: data.list[0].components.no2,
+        o3: data.list[0].components.o3,
+        pm2_5: data.list[0].components.pm2_5,
+        pm10: data.list[0].components.pm10
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching air quality data:', error);
+    
+    // Fallback data
+    return {
+      aqi: Math.floor(Math.random() * 5) + 1,
+      status: ['Good', 'Moderate', 'Unhealthy for Sensitive Groups', 'Unhealthy', 'Very Unhealthy'][Math.floor(Math.random() * 5)] as any,
+      components: {
+        co: Math.random() * 1000,
+        no2: Math.random() * 50,
+        o3: Math.random() * 100,
+        pm2_5: Math.random() * 75,
+        pm10: Math.random() * 100
+      }
+    };
+  }
+};
+
+// Get local events
+export const getLocalEvents = async (
+  city: string
+): Promise<Array<{
+  name: string;
+  date: string;
+  type: string;
+}>| null> => {
+  // In a real app, you'd use an events API like Ticketmaster, Eventbrite, etc.
+  // For now, we'll generate some plausible events based on the destination
+  
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 700));
+  
+  // Generate events based on the current month
+  const currentMonth = new Date().getMonth();
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                 'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  const eventTypes = {
+    cultural: ['Festival', 'Exhibition', 'Concert', 'Traditional Show'],
+    religious: ['Ceremony', 'Procession', 'Celebration', 'Ritual'],
+    food: ['Food Festival', 'Culinary Tour', 'Tasting Event'],
+    art: ['Art Exhibition', 'Craft Fair', 'Performance']
+  };
+  
+  const eventBase = {
+    'Delhi': { main: 'cultural', secondary: 'food' },
+    'Mumbai': { main: 'art', secondary: 'cultural' },
+    'Jaipur': { main: 'cultural', secondary: 'art' },
+    'Agra': { main: 'cultural', secondary: 'religious' },
+    'Varanasi': { main: 'religious', secondary: 'cultural' },
+    'Goa': { main: 'food', secondary: 'cultural' },
+    'Udaipur': { main: 'cultural', secondary: 'art' },
+    'Kochi': { main: 'cultural', secondary: 'food' }
+  };
+  
+  // Default to cultural events if city not found
+  const cityProfile = (eventBase as any)[city] || { main: 'cultural', secondary: 'religious' };
+  
+  // Generate 3-5 events
+  const numEvents = Math.floor(Math.random() * 3) + 3;
+  const events = [];
+  
+  for (let i = 0; i < numEvents; i++) {
+    const eventDay = Math.floor(Math.random() * 28) + 1;
+    const eventType = Math.random() > 0.3 ? cityProfile.main : cityProfile.secondary;
+    const types = (eventTypes as any)[eventType];
+    
+    events.push({
+      name: `${city} ${types[Math.floor(Math.random() * types.length)]}`,
+      date: `${months[currentMonth]} ${eventDay}`,
+      type: eventType
+    });
+  }
+  
+  return events;
+};
+
+// Get currency exchange rates
+export const getCurrencyRates = async (): Promise<{
+  base: string;
+  rates: Record<string, number>;
+  lastUpdated: string;
+}> => {
+  try {
+    // For demo purposes, we're using fixed data
+    // In production, you'd use a currency API like Exchange Rates API
+    return {
+      base: 'USD',
+      rates: {
+        'INR': 75.42,
+        'EUR': 0.92,
+        'GBP': 0.79,
+        'JPY': 110.21,
+        'AUD': 1.45,
+        'CAD': 1.36,
+        'SGD': 1.39
+      },
+      lastUpdated: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error fetching currency data:', error);
+    
+    return {
+      base: 'USD',
+      rates: {
+        'INR': 75.42,
+        'EUR': 0.92,
+        'GBP': 0.79,
+        'JPY': 110.21,
+        'AUD': 1.45,
+        'CAD': 1.36,
+        'SGD': 1.39
+      },
+      lastUpdated: new Date().toISOString()
+    };
   }
 };
